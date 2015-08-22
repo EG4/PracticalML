@@ -77,7 +77,7 @@ img {
 <pre class="r"><code>#Download the csv datasets to a local directory and read and save with the following commands:
 library(gdata)
 training = read.csv(&quot;pml-training.csv&quot;)
-save(training, file=&quot;training.saved&quot;)  #so that we can load much faster later with load()
+save(training, file=&quot;training.saved&quot;)
 testing = read.csv(&quot;pml-testing.csv&quot;)
 save(testing, file=&quot;testing.saved&quot;)</code></pre>
 <p>Reading the description of the dataset and the experiment by the original authors of the study, I see that they essentially reduced the dozens of experimental values obtained in each time window to a set of statistics, like mean/max/stdev/etc. (those rows were signified by “yes” values for the new_window variable), so clearly they designed the test intending to summarize the values of the individual measurements within each window. It is a bit puzzling then to see that the 20 test cases we are asked to apply our ML algorithm on are not restricted to new_window values of “yes”, so this kind of forces us to look at the data not in the way the designers of the experiment meant to, but I digress. We are, in the end, asked to build a model based on all the individual values for each “window” in the dataset. Some variables are clearly irrelevant to the prediction (such as the time stamps), while the statistics variables (kurtosis, ave, min, max, etc.) have the vast majority of values blank or NA, which leads us to the next section of cleaning up the data.</p>
@@ -171,20 +171,20 @@ ctrl &lt;- trainControl(method=&quot;cv&quot;, number=10)</code></pre>
 <p>Use Boosting:</p>
 <pre class="r"><code>set.seed(999)
 ptm &lt;- proc.time()
-#gbmModel &lt;- train(classe~., data=trainSet, method=&quot;gbm&quot;, trControl=ctrl, verbose=FALSE)
+gbmModel &lt;- train(classe~., data=trainSet, method=&quot;gbm&quot;, trControl=ctrl, verbose=FALSE)
 proc.time() - ptm</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.001   0.000   0.001</code></pre>
-<pre class="r"><code>#save(gbmModel, file=&quot;gbmModel.saved&quot;)</code></pre>
+##   582.364  10.127 596.649</code></pre>
+<pre class="r"><code>save(gbmModel, file=&quot;gbmModel.saved&quot;)</code></pre>
 <p>Now use Random Forest:</p>
 <pre class="r"><code>set.seed(999)
 ptm &lt;- proc.time()
-#rfModel &lt;- train(classe~., data=trainSet, method=&quot;rf&quot;, trControl=ctrl, verbose=FALSE)
+rfModel &lt;- train(classe~., data=trainSet, method=&quot;rf&quot;, trControl=ctrl, verbose=FALSE)
 proc.time() - ptm</code></pre>
 <pre><code>##    user  system elapsed 
-##   0.000   0.000   0.001</code></pre>
-<pre class="r"><code>#save(rfModel, file=&quot;rfModel.saved&quot;)</code></pre>
-<p>Run times: Boosting took ~9 minutes to finish, while Random Forest took ~25 minutes.</p>
+##   1583.300   10.489 1598.088</code></pre>
+<pre class="r"><code>save(rfModel, file=&quot;rfModel.saved&quot;)</code></pre>
+<p>Run times: Boosting took ~9 minutes to finish, while Random Forest took ~27 minutes.</p>
 <p>Results for Boosting:</p>
 <pre class="r"><code>load(&quot;gbmModel.saved&quot;)
 gbmModel</code></pre>
@@ -200,25 +200,25 @@ gbmModel</code></pre>
 ## Resampling results across tuning parameters:
 ## 
 ##   interaction.depth  n.trees  Accuracy   Kappa      Accuracy SD
-##   1                   50      0.7538047  0.6879576  0.010230109
-##   1                  100      0.8206315  0.7730346  0.009725031
-##   1                  150      0.8528799  0.8138593  0.009255213
-##   2                   50      0.8541163  0.8152035  0.009922589
-##   2                  100      0.9055107  0.8804105  0.007219341
-##   2                  150      0.9328097  0.9149611  0.007119416
-##   3                   50      0.8941540  0.8660213  0.010105134
-##   3                  100      0.9416173  0.9261187  0.007108629
-##   3                  150      0.9607632  0.9503579  0.004695539
+##   1                   50      0.7546032  0.6889625  0.011680394
+##   1                  100      0.8209214  0.7733458  0.008932538
+##   1                  150      0.8549890  0.8164886  0.010830217
+##   2                   50      0.8546251  0.8158414  0.007107467
+##   2                  100      0.9056551  0.8806115  0.009922887
+##   2                  150      0.9312802  0.9130392  0.007380182
+##   3                   50      0.8975755  0.8703877  0.008283242
+##   3                  100      0.9415445  0.9260341  0.010465919
+##   3                  150      0.9598877  0.9492485  0.007236647
 ##   Kappa SD   
-##   0.012878977
-##   0.012389365
-##   0.011776406
-##   0.012701026
-##   0.009191519
-##   0.009031419
-##   0.012881259
-##   0.009024588
-##   0.005950918
+##   0.014847809
+##   0.011431636
+##   0.013805679
+##   0.009061785
+##   0.012625349
+##   0.009364991
+##   0.010478262
+##   0.013265102
+##   0.009175333
 ## 
 ## Tuning parameter 'shrinkage' was held constant at a value of 0.1
 ## 
@@ -241,13 +241,13 @@ rfModel</code></pre>
 ## Resampling results across tuning parameters:
 ## 
 ##   mtry  Accuracy   Kappa      Accuracy SD  Kappa SD   
-##    2    0.9911191  0.9887639  0.002718177  0.003440458
-##   29    0.9923568  0.9903311  0.002478853  0.003135512
-##   57    0.9883527  0.9852652  0.002590488  0.003277325
+##    2    0.9903905  0.9878422  0.002084341  0.002639214
+##   29    0.9911184  0.9887647  0.003028578  0.003831482
+##   57    0.9855858  0.9817650  0.004628713  0.005858260
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
 ## The final value used for the model was mtry = 29.</code></pre>
-<p>Summary: the Random Forest model with mtry value of 2 resulted in the best accuracy (0.9949), while the Boosting model with number of trees = 150 and an interaction depth of 3 go to 0.9636.</p>
+<p>Summary: the Random Forest model with mtry value of 29 resulted in the best accuracy (0.9911), while the Boosting model with number of trees = 150 and an interaction depth of 3 had the highest accuracy (0.9599). Random Forest is the clear winner.</p>
 </div>
 <div id="cross-validating" class="section level2">
 <h2>4. Cross-validating</h2>
@@ -258,34 +258,34 @@ print(confusionMatrix(pred, validationSet$classe), digits=4)</code></pre>
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1674    2    0    0    0
-##          B    0 1137    0    0    0
-##          C    0    0 1025    8    0
-##          D    0    0    1  954    0
-##          E    0    0    0    2 1082
+##          A 1673   10    0    0    0
+##          B    1 1126    3    0    0
+##          C    0    3 1018    8    2
+##          D    0    0    5  955    5
+##          E    0    0    0    1 1075
 ## 
 ## Overall Statistics
 ##                                           
-##                Accuracy : 0.9978          
-##                  95% CI : (0.9962, 0.9988)
+##                Accuracy : 0.9935          
+##                  95% CI : (0.9911, 0.9954)
 ##     No Information Rate : 0.2845          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##     P-Value [Acc > NIR] : < 2.2e-16       
 ##                                           
-##                   Kappa : 0.9972          
+##                   Kappa : 0.9918          
 ##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   0.9982   0.9990   0.9896   1.0000
-## Specificity            0.9995   1.0000   0.9984   0.9998   0.9996
-## Pos Pred Value         0.9988   1.0000   0.9923   0.9990   0.9982
-## Neg Pred Value         1.0000   0.9996   0.9998   0.9980   1.0000
+## Sensitivity            0.9994   0.9886   0.9922   0.9907   0.9935
+## Specificity            0.9976   0.9992   0.9973   0.9980   0.9998
+## Pos Pred Value         0.9941   0.9965   0.9874   0.9896   0.9991
+## Neg Pred Value         0.9998   0.9973   0.9984   0.9982   0.9985
 ## Prevalence             0.2845   0.1935   0.1743   0.1638   0.1839
-## Detection Rate         0.2845   0.1932   0.1742   0.1621   0.1839
-## Detection Prevalence   0.2848   0.1932   0.1755   0.1623   0.1842
-## Balanced Accuracy      0.9998   0.9991   0.9987   0.9947   0.9998</code></pre>
-<p>We see that TESTING ??</p>
+## Detection Rate         0.2843   0.1913   0.1730   0.1623   0.1827
+## Detection Prevalence   0.2860   0.1920   0.1752   0.1640   0.1828
+## Balanced Accuracy      0.9985   0.9939   0.9948   0.9943   0.9967</code></pre>
+<p>We see that the Accuracy of running the RF model on the validation set is 0.9935, so the out-of-sample error is 1-0.9935=0.0065, quite low.</p>
 <p>Finally, run the RF model on the 20 test cases:</p>
 <pre class="r"><code>#first, keep the same columns as the ones we kept for the training dataset:
 testing=subset(testing,select=-c(1,raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp,new_window,num_window))
@@ -296,7 +296,6 @@ dim(testing)  </code></pre>
 print(predict(rfModel, newdata=testing))</code></pre>
 <pre><code>##  [1] B A B A A E D B A A B C B A E E A B B B
 ## Levels: A B C D E</code></pre>
-<p>Done!!!!!!!!!!!!!!!</p>
 </div>
 
 
