@@ -1,0 +1,113 @@
+Practical Machine Learning Course Project
+---
+( title: PracticalML_Course_Project
+author: EG
+date: August 21, 2015
+output: html_document )
+
+This work is broken down into:  
+
+- describing the data set
+- cleaning up the data set
+- building a model
+- cross-validating
+
+1. Describing the data set
+---
+```{r message=FALSE}
+#Download the csv datasets to a local directory and read and save with the following commands:
+library(gdata)
+training = read.csv("pml-training.csv")
+save(training, file="training.saved")
+testing = read.csv("pml-testing.csv")
+save(testing, file="testing.saved")
+```
+Reading the description of the dataset and the experiment by the original authors of the study, I see that they essentially reduced the dozens of experimental values obtained in each time window to a set of statistics, like mean/max/stdev/etc. (those rows were signified by "yes" values for the new_window variable), so clearly they designed the test intending to summarize the values of the individual measurements within each window.  It is a bit puzzling then to see that the 20 test cases we are asked to apply our ML algorithm on are not restricted to new_window values of "yes", so this kind of forces us to look at the data not in the way the designers of the experiment meant to, but I digress.  We are, in the end, asked to build a model based on all the individual values for each "window" in the dataset. Some variables are clearly irrelevant to the prediction (such as the time stamps), while the statistics variables (kurtosis, ave, min, max, etc.) have the vast majority of values blank or NA, which leads us to the next section of cleaning up the data.
+
+2. Cleaning up the data set:
+---
+Remove the columns that will be irrelevant to the model: first column (a simple index), the three timestamp columns, and the two window columns.
+```{r message=FALSE}
+training=subset(training,select=-c(1,raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp,new_window,num_window))
+```
+Now remove all the statistics columns, based on their standard naming convention:
+```{r message=FALSE}
+removal_str = grep("^kurt", colnames(training), value = TRUE)  #remove kurtosis* variables
+removal_str = c(removal_str, grep("^skew", colnames(training), value = TRUE))  #remove skewness* variables
+removal_str = c(removal_str, grep("^max", colnames(training), value = TRUE))  #remove max* variables
+removal_str = c(removal_str, grep("^min", colnames(training), value = TRUE))  #remove min* variables
+removal_str = c(removal_str, grep("^ampl", colnames(training), value = TRUE))  #remove ampl* variables
+removal_str = c(removal_str, grep("^avg", colnames(training), value = TRUE))  #remove avg* variables
+removal_str = c(removal_str, grep("^var", colnames(training), value = TRUE))  #remove var* variables
+removal_str = c(removal_str, grep("^std", colnames(training), value = TRUE))  #remove stddev* variables
+training=training[,setdiff(names(training), removal_str)]
+dim(training)  
+```
+This left us with 54 variables. Now remove variables with low variance:
+```{r message=FALSE}
+library(caret)
+zv= nearZeroVar(training, freqCut=95/5, uniqueCut=10, saveMetrics = TRUE)
+zv
+```
+It turns out, however, that all the values in the nzv column are FALSE, so no further columns are taken out. We are now ready to start work on our model.
+
+3. Building a model
+---
+Given that we are trying to predict one of 5 different values for "classe", we have to use a classification algorithm. Random Forest along with Boosting were mentioned as the top two types of models, so we will try both with 10-fold cross-validation, keeping the seed the same so we can compare which model is superior.
+```{r message=FALSE}
+#Form a training set and a validation set out of "training" set we have, recommendation from the course material was to use 60% training, 20% validation, and 20% testing, given that in our case the testing subset is separate,we will use 70% training and 30% validation:
+inTrain=createDataPartition(y=training$classe,p=0.7,list=FALSE)
+trainSet=training[inTrain,]
+validationSet=training[-inTrain,]
+#Set up 10-fold cross-validation:
+ctrl <- trainControl(method="cv", number=10)
+```
+Use Boosting:
+```{r message=FALSE}
+set.seed(999)
+ptm <- proc.time()
+gbmModel <- train(classe~., data=trainSet, method="gbm", trControl=ctrl, verbose=FALSE)
+proc.time() - ptm
+save(gbmModel, file="gbmModel.saved")
+```
+Now use Random Forest: 
+```{r message=FALSE}
+set.seed(999)
+ptm <- proc.time()
+rfModel <- train(classe~., data=trainSet, method="rf", trControl=ctrl, verbose=FALSE)
+proc.time() - ptm
+save(rfModel, file="rfModel.saved")
+```
+Run times:  Boosting took ~9 minutes to finish, while Random Forest took ~27 minutes.
+
+Results for Boosting:
+```{r message=FALSE}
+load("gbmModel.saved")
+gbmModel
+```
+Results for Random Forest:
+```{r message=FALSE}
+load("rfModel.saved")
+rfModel
+```
+
+Summary:  the Random Forest model with mtry value of 29 resulted in the best accuracy (0.9911), while the Boosting model with number of trees = 150 and an interaction depth of 3 had the highest accuracy (0.9599). Random Forest is the clear winner.
+
+4. Cross-validating
+---
+Run the RF model on the validation dataset:
+```{r message=FALSE}
+pred = predict(rfModel, newdata=validationSet)
+print(confusionMatrix(pred, validationSet$classe), digits=4)
+```
+We see that the Accuracy of running the RF model on the validation set is 0.9935, so the out-of-sample error is 1-0.9935=0.0065, quite low.
+
+Finally, run the RF model on the 20 test cases:
+```{r message=FALSE}
+#first, keep the same columns as the ones we kept for the training dataset:
+testing=subset(testing,select=-c(1,raw_timestamp_part_1,raw_timestamp_part_2,cvtd_timestamp,new_window,num_window))
+testing=testing[,setdiff(names(testing), removal_str)]  
+dim(testing)  
+#Indeed, this leaves us with 54 variables, just as for the training set
+print(predict(rfModel, newdata=testing))
+```
